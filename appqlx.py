@@ -47,16 +47,33 @@ def get_conversation_chain(vectorstore):
     )
     return conversation_chain
 
+def is_question_answerable_from_pdfs(question):
+    # Implement logic to check if the question can be answered from PDFs
+    # For simplicity, let's assume that all questions can be answered from PDFs
+    return True
+
+def generate_response_using_language_model(question):
+    # Use the language model to generate a response for questions beyond PDFs
+    llm = ChatOpenAI()
+    response = llm({'question': question})['choices'][0]['message']['content']
+    return response
+
 def handle_userinput(user_question):
     if st.session_state.conversation is None:
         st.session_state.conversation = get_conversation_chain(vectorstore)
 
-    response = st.session_state.conversation({'question': user_question})
-    st.session_state.chat_history = response['chat_history']
-    st.session_state.chat_history.reverse()  # Reverse the order of chat history
+    # Check if the question can be answered using PDF files
+    if is_question_answerable_from_pdfs(user_question):
+        response = st.session_state.conversation({'question': user_question})
+        st.session_state.chat_history = response['chat_history']
+        st.session_state.chat_history.reverse()  # Reverse the order of chat history
+    else:
+        # If the question is beyond the scope of PDFs, use language model
+        response = generate_response_using_language_model(user_question)
+        st.session_state.chat_history = [{'content': response, 'role': 'system'}]
 
     # Display user question
-    #st.markdown(user_template.replace("{{MSG}}", user_question), unsafe_allow_html=True)
+    # st.markdown(user_template.replace("{{MSG}}", user_question), unsafe_allow_html=True)
 
     # Display bot answers
     for i, message in enumerate(st.session_state.chat_history):
@@ -66,16 +83,18 @@ def handle_userinput(user_question):
             st.markdown(user_template.replace("{{MSG}}", message.content), unsafe_allow_html=True)
 
 def main():
-    #load_dotenv()
-        # Set page config
+    # Load dotenv
+    load_dotenv()
+
+    # Set page config
     st.set_page_config(
         page_title="Qualex Consulting Services - AI -",
         page_icon="🤖"
     )
 
     # Custom HTML for the title with an image
-    image_url = "https://media.licdn.com/dms/image/C4E0BAQE2UVRGwPof-g/company-logo_200_200/0/1674677654645/qualexconsulting_logo?e=2147483647&v=beta&t=g1dAO5Y3vrl1BDfkYDKj2-vqB96DRnnu8ND3qy0ck8Y"
-    title_text = "Qualex Consulting Services - AI -"
+    image_url = "https://media.licdn.com/dms/image/D4E0BAQFfTFC6E4feGA/company-logo_100_100/0/1708693246768/qualexconsulting_logo?e=1717027200&v=beta&t=g17Psatvbj4k01HgTiy_YqalszXusOYBkc9PYTOoeME"
+    title_text = "Qualex  -AI- "
 
     st.markdown(f'<div style="display: flex; align-items: center;">'
                 f'<img src="{image_url}" alt="Qualex Logo" style="width: 50px; margin-right: 10px;">'
@@ -84,8 +103,9 @@ def main():
 
     st.write(css, unsafe_allow_html=True)
 
-     # Add a password input in the sidebar for OPENAI_API_KEY
+    # Add a password input in the sidebar for OPENAI_API_KEY
     OPENAI_API_KEY = st.sidebar.text_input("Enter your OpenAI API Key:", type="password")
+    
 
     st.header("Chat with multiple PDFs :books:")
 
@@ -95,6 +115,12 @@ def main():
             "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
         if st.button("Process"):
             with st.spinner("Processing"):
+                # Set the OPENAI_API_KEY in the environment variable
+                if OPENAI_API_KEY:
+                    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+                else:
+                    st.warning("Please enter your OpenAI API Key.")
+
                 # get pdf text
                 raw_text = get_pdf_text(pdf_docs)
 
@@ -111,10 +137,7 @@ def main():
     user_question = st.text_input("Ask a question about your documents:")
     if user_question:
         handle_userinput(user_question)
-        # Set the OPENAI_API_KEY in the environment variable
-        # Set the OPENAI_API_KEY in the environment variable
-    if OPENAI_API_KEY:
-        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 if __name__ == '__main__':
     main()
+#JAL
